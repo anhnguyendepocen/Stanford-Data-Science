@@ -1,0 +1,797 @@
+###
+### This file is meant to document/archive code examples from the getting & cleaning data cours from Johns Hopkins.
+### Some of it is original, some of it is from their notes. 
+###
+
+if(!file.exists("data")){dir.create("data")}
+fileUrl <- "https://data.baltimorecity.gov/api/views/dz54-2aru/rows.xlsx?accessType=DOWNLOAD"
+download.file(fileUrl,destfile="./data/cameras.xlsx",method="curl") #agnostic to the file type
+dateDownloaded <- date() #when it was performed
+install.packages(xlsx)
+library("xlsx")#handle the excel file 
+cameraData<-read.xlsx("./data/cameras.xlsx",sheetIndex=1,header=TRUE)
+head(cameraData)
+
+
+#XML extraction
+install.packages("XML")
+library(XML)
+fileURL <- "http://www.w3schools.com/xml/simple.xml")
+doc <- xmlTreeParse(fileURL,useInternal=TRUE)
+rootNode <- xmlRoot(doc)
+xmlName(rootNode)
+
+#mySQL databases 
+
+#install mySQL
+#can be complicated
+#http://dev.mysql.com/doc/refman/5.7/en/installing.html
+
+#then set up RMySQL
+#go to http://biostat.mc.vanderbilt.edu/wiki/Main/RMySQL 
+#good useful guide http://www.ahschulz.de/2013/07/23/installing-rmysql-under-windows/
+
+#web facing version of mySQL database is UCSC database of genome bioinformatics 
+
+#likely role is collecting data from a database... basic collection is performed before arriving
+
+
+
+## Tidy data sets for downstream analysis
+
+#four things: raw data, a tidy data set, a code book desc each variable and its values in the tidy data set. often called meta data. surrounds data and explains what it is trying to say. Units described. 
+#explicit and exact recipe or steps for raw to processed data. R scripts will be put together. 
+#raw data is rawest form of data we had access to. binary file, unformatted excel with ten worksheets think client, json, api, hand counts in lab. 
+#ran no software on the data. 
+#did not manipulate numbers or remove any data from data set, did not summarize in any way. 
+#TIDY data is end goal. one variable per column, rows are observations. one file per table not multiple spreadsheets. better to save diff file. 
+#the code book is often missing. you have tidy data set and you got it by doing a lot of stuff to a raw data set. how you picked variables, etc. 
+#instruction list is good. raw to tidy instructions. it's hard to script every step. version of software, parameters. 
+#if can't write script, go overboard on detail. 
+
+
+## Downloading files from the internet
+
+#using R to download files, no point and click. dl process is in script so you get complete pic of generation 
+#directory needs to be known. getwd() setwd(). setwd(".\data"). windows are backslashes not mac though. 
+
+if(!file.exists("data")) {
+    dir.create("data")
+}
+
+file.exists("directoryName") #will check to see if directory exists
+dir.create("diretoryName") #will create a directory if it doesn't exists
+
+
+download.file() #important, dl's files from internet. you could do by hand but that's gehh. improves reproducibility.
+#need URL, destfile (destination file) where data will go, and method 
+#useful for tab, csv, excel, pretty agnostic to file type
+#Baltimore camera data. 
+
+fileUrl <- "https://data.baltimorecity.gov/api/views/dz54-2aru/rows.csv?accesType=DOWNLOAD"
+download.file(fileUrl,destfile = "./data/cameras.csv", method = "curl")#curl is in https for seure websites. important for mac. listing the files in teh directory 
+list.files(".data")
+dateDownloaded <- date()
+
+
+
+
+## Reading local flat files lecture
+#they say we can skip 
+
+if(!file.exists("data")) {
+    dir.create("data")
+}
+fileUrl<-"https://data.baltimorecity.gov/api/views/dz54-2aru/rows.csv?accesType=DOWNLOAD"
+download.file(fileUrl, destfile = "cameras.csv")
+dateDownloaded <- date()
+dateDownloaded
+
+cameras<-read.csv("cameras.csv",header=TRUE)
+
+head(cameras)
+
+#read.table bad for large data sets, loads it into Ram. file, header, sep, row.names, nrows. 
+
+cameraData <- read.table(".data/cameras.csv",sep=",", header=TRUE)
+
+#quote, na.strings, nrows, skip... what's na, number of rows to read, and how many rows to skip at beginning. 
+
+
+## Reading Excel data. 
+
+#people are used to spreadsheets. easy etc. 
+
+
+if(!file.exists("data")) {dir.create("data")}
+fileUrl<-"https://data.baltimorecity.gov/api/views/dz54-2aru/rows.csv?accesType=DOWNLOAD"
+download.file(fileUrl,destfile="./data/cameras.xlsx")
+dateDownloaded<-date()
+dateDownloaded
+
+install.packages("xlsx")
+library(xlsx)
+cameraData<-read.xlsx("./data/cameras.xlsx",sheetIndex=1,header=TRUE)
+head(cameraData)
+tail(cameraData)
+
+#can read specific rows and columns
+colIndex<-2:3
+rowIndex<-1:4
+cameraDataSubset<-read.xlsx("./data/cameras.xlsx",sheetIndex=1,colIndex=colIndex,rowIndex=rowIndex)
+
+write.xlsx() #writes files 
+read.xlsx2() #quite a bit faster, but unstable with subsets of rows
+install.packages("XLConnect")
+library(XLConnect)
+
+#text files are best not excel files!
+
+
+
+
+
+## Reading XML extensible markup language.
+
+#internet. web scraping. API. open data websites. 
+#markup is labels that give text structure. the way you add labels so file is structured. content is actual text typed in. tags elements and attributes
+#start tags <section></section> start and end tags
+#empty tags <line-break /> 
+#<Greeting> Hello, world </Greeting>
+#<img src="jeff.jpg" alt="instructor" />
+#<step number="3"> Connect A to B. </step>
+
+#see wikipedia XML. 
+
+
+#go to http://www.w3schools.com/xml/simple.xml
+
+
+#read into R with XML pacakge
+
+install.packages("XML")
+library(XML)
+fileUrl<- "http://www.w3schools.com/xml/simple.xml"
+doc<-xmlTreeParse(fileUrl,useInternal=TRUE)
+rootNode<-xmlRoot(doc)
+xmlName(rootNode)
+dateDownloaded<-date()
+dateDownloaded
+names(rootNode)
+#returns food food food... 
+#xml tree parse loads doc into memory so you can parse it and get access to it. still structured object within R. 
+#Root node is the highest part. wrapper element for entire document. 
+
+rootNode[[1]] #returns first food element. to keep drilling down you an do more subsetting like lists
+rootNode[[1]][[1]]
+
+xmlSApply(rootNode,xmlValue) #loops through all elements of root node, does recursively, gets every value of every single tagged element in document, text strung together, all text in doc. 
+#can be more specific. 
+
+
+#the XPath language is pretty handy. Go to 
+# http://stat.berkeley.edu/~statcur/Workshop2/Presentations/XML.pdf
+
+#learning a few components goes a very long way. 
+#/node top level node, //node at any level
+
+xpathSApply(rootNode,"//name",xmlValue)
+xpathSApply(rootNode,"//price",xmlValue)
+#set root node to price. xmlValue will return their actual values. 
+
+#Ravens website on ESPN
+
+# http://espn.go.com/nfl/team/_/name/baltimore-ravens
+
+#see source code by right clicking. 
+
+fileUrl <- " http://espn.go.com/nfl/team/_/name/bal/baltimore-ravens"
+doc <- htmlTreeParse(fileUrl,useInternal=TRUE)
+scores<-xpathSApply(doc,"//li[@class='score']",xmlValue)
+teams<-xpathSApply(doc,"//li[@class='team-name']",xmlValue)
+scores
+teams
+#html instead of xml becaues it's diff enough
+install.packages("html")
+library(html)
+#INSTALLING 2.7.1 win32 R for windows
+
+
+
+## JSON reading
+
+#javascript object notation. lightweight for data storage
+#comon format for data of API's 
+#different syntax from XML
+#no strings boolean array and objects. 
+#see wikipedia page. 
+#example JSON file
+#overall [ 
+# {
+#}]
+
+install.packages("jsonlite")
+library(jsonlite)
+
+jsonData<- fromJSON("https://api.github.com/users/jtleek/repos")
+
+names(jsonData)
+
+names(jsonData$owner)#will give all the names of the table stored within that column ... storing data frame within a data frame 
+#bc owner corresponds to array of values 
+
+#take data frame and transform
+
+myjson <- toJSON(iris, pretty=TRUE)
+#good for API that requires JSON
+cat(myjson)
+#now a text variable. 
+
+iris2<-fromJSON(myjson)
+head(iris2) #send it back to data frame. usually we'd pass a URL here but 
+
+#see http://www.r-bloggers.com/new-package-jsonlite-a-smarter-json-encoderdecoder/
+
+
+
+## Data . table package 
+
+#more efficient than data frame
+#inherits from data.frame. all functions that accept data.frame work on data . table written in C so it is MUCH faster
+#faster at subsetting, grouping, updating, than data.frame is ... new syntax though. 
+
+install.packages("data.table")
+library(data.table)
+DF = data.frame(x=rnorm(9),y=rep(c("a","b","c"),each=3),z=rnorm(9))
+head(DF,3)
+
+
+DT = data.table(x=rnorm(9),y=rep(c("a","b","c"),each=3),z=rnorm(9))
+head(DT,3)
+
+#to see all tables in memory 
+
+tables() #note the S at end
+
+DT[2,] #subset rows using first spot
+
+DT[DT$y=='a']
+
+DT[c(2,3)] #gets only rows 
+#column subsetting is different!!!!!
+#uses expressions to summarize the data in diff ways. 
+DT[,list(mean(x),sum(z))] 
+#passes a list of functions, x and z are variables in teh data table. no quotes. 
+DT[,table(y)]
+
+DT[,w:=z^2]
+DT #to make sure 
+
+#adds a new column
+
+DT2 <- DT #since no copy is made, we can end up making a mistake 
+#must EXPLICITLY create a copy to not mutate it
+
+DT[,m:={tmp <- (x+z);log2(tmp+5)}]
+#m assigned to log base two of x + z plus five
+
+DT[,a:=x>0] #binary variable now 
+DT
+
+DT[,b:=mean(x+w),by=a] #group by a 
+DT
+
+#special variables... .N
+
+set.seed(123);
+DT <- data.table(x=sample(letters[1:3],1E5,TRUE))
+DT[, .N, by=x] #counts .N number of times grouped by x variable ... very fast compared to 
+
+#unique aspect is keys. 
+#sort and subset rapidly with keys. 
+
+DT <- data.table(x=rep(c("a","b","c"),each=100), y=rnorm(300))
+setkey(DT, x) #var x is key now 
+DT['a'] #subset on basis fo x, quote 'a' quickly subsets based on key. 
+
+
+DT1 <- data.table(x=c('a','a','b','dt1'),y=1:4)
+DT2 <- data.table(x=c('a','b','dt2'),z=5:7)
+setkey(DT1,x);setkey(DT2, x)
+merge(DT1, DT2)
+#merges the data tables. 
+#key in both cses is equal to x after set key... much faster as long as same key for both operations. 
+
+#fast reading of info
+
+big_df <- data.frame(x=rnorm(1E6),y=rnorm(1E6))
+file <- tempfile() #temporary file, write it to big file 
+#then time with fread() command 
+write.table(big_df, file=file, row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE)
+system.time(fread(file))
+#this is much slower below
+system.time(read.table(file,header=TRUE,sep="\t"))
+
+
+
+
+###################################################################################################################################################################################
+
+
+#### QUIZ 1 4/13 
+
+download.file("https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06hid.csv",destfile="quiz1.csv")
+
+q1data<-read.csv("quiz1.csv",header=TRUE)
+
+#how many properties are worth $1MM or more 
+
+hist(q1data$VAL)
+
+
+download.file("https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2FDATA.gov_NGAP.xlsx",destfile="NaturalGas.xlsx")
+
+#Question 5
+#attempt 1 tapply(DT$pwgtp15,DT$SEX,mean)
+
+
+#The American Community Survey distributes downloadable data about United States communities. Download the 2006 microdata survey about housing for the state of Idaho using download.file() from here: 
+
+# https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06pid.csv 
+
+#using the fread() command load the data into an R object
+
+download.file("https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06pid.csv",destfile=Communities.csv)
+
+DT<-read.csv("Communities.csv",header=TRUE)
+
+tapply(DT$pwgtp15,DT$SEX,mean)
+
+
+#Question 4
+#Read the XML data on Baltimore #restaurants from here: 
+
+#https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Frestaurants.xml 
+
+#How many restaurants have zipcode 21231?
+#156
+#28
+#17
+#127
+
+install.packages("XML") #in R 2.7 
+library(XML)
+
+
+#quiz again
+
+install.packages("readxl")
+library(readxl)
+download.file("https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2FDATA.gov_NGAP.xlsx",destfile="NaturalGas.xlsx")
+
+
+fileUrl <- "https://data.baltimorecity.gov/api/views/dz54-2aru/rows.xlsx?accessType=DOWNLOAD"
+download.file (fileUrl, destfile = "./cameras.xlsx", mode='wb') 
+dateDownloaded <- date() # set date of the download
+install.packages("rJava")
+install.packages("xlsxjars")
+install.packages("xlsx")
+Sys.setenv(JAVA_HOME='C:/Program Files/Java/jre1.8.0_40')
+library(rJava)
+library(xlsxjars)
+library(xlsx)
+cameraData <- read.xlsx("./cameras.xlsx", sheetIndex = 1)
+head(cameraData)
+
+#Question 1
+#The American Community Survey distributes downloadable data about United States communities. Download the 2006 microdata survey about housing for the state of Idaho using download.file() from here: 
+
+#https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06hid.csv 
+
+#and load the data into R. The code book, describing the variable names is here: 
+
+#https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2FPUMSDataDict06.pdf 
+
+#How many properties are worth $1,000,000 or more?
+#Your Answer		Score	Explanation
+#53	Correct	3.00	
+#159			
+#47			
+#24			
+#Total		3.00 / 3.00	
+#Question 2
+#Use the data you loaded from Question 1. Consider the variable FES in the code book. Which of the "tidy data" principles does this variable violate?
+#Your Answer		Score	Explanation
+#Tidy data has no missing values.			
+#Each tidy data table contains information about only one type of observation.	Inorrect	0.00	
+#Each variable in a tidy data set has been transformed to be interpretable.			
+#Tidy data has one variable per column.			
+#Total		0.00 / 3.00	
+#Question 3
+#Download the Excel spreadsheet on Natural Gas Aquisition Program here: 
+
+#https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2FDATA.gov_NGAP.xlsx 
+
+#Read rows 18-23 and columns 7-15 into R and assign the result to a variable called:
+# dat 
+#What is the value of:
+# sum(dat$Zip*dat$Ext,na.rm=T) 
+#(original data source: http://catalog.data.gov/dataset/natural-gas-acquisition-program)
+#Your Answer		Score	Explanation
+#33544718			
+#0			
+#184585			
+#36534720	Correct	3.00	
+#Total		3.00 / 3.00	
+#Question 4
+#Read the XML data on Baltimore restaurants from here: 
+
+#https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Frestaurants.xml 
+
+#How many restaurants have zipcode 21231?
+#Your Answer		Score	Explanation
+#181			
+#17			
+#28			
+#127	Correct	3.00	
+#Total		3.00 / 3.00	
+#Question 5
+#The American Community Survey distributes downloadable data about United States communities. Download the 2006 microdata survey about housing for the state of Idaho using download.file() from here: 
+
+#https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06pid.csv 
+
+#using the fread() command load the data into an R object
+# DT 
+#Which of the following is the fastest way to calculate the average value of the variable
+#pwgtp15 
+#broken down by sex using the data.table package?
+#Your Answer		Score	Explanation
+#tapply(DT$pwgtp15,DT$SEX,mean)			
+#DT[,mean(pwgtp15),by=SEX]			
+#mean(DT[DT$SEX==1,]$pwgtp15); mean(DT[DT$SEX==2,]$pwgtp15)			
+#mean(DT$pwgtp15,by=DT$SEX)			
+#sapply(split(DT$pwgtp15,DT$SEX),mean)	Correct	3.00	
+#rowMeans(DT)[DT$SEX==1]; rowMeans(DT)[DT$SEX==2]			
+#Total		3.00 / 3.00
+
+# END QUIZ
+
+########################################################################################################################################################################
+
+
+
+
+# mySQL lecture lecture 1 of week 2 
+# http://dev.mysql.com/doc/refman/5.7/en/installing.html 
+#install mySQL. A web facing mySql server is what we'll do here 
+
+#install RMySQL 
+install.packages("RMySQL")
+# see http://biostat.mc.vanderbilt.edu/wiki/Main/RMySQL 
+library(RMySQL)
+
+#for windows it is more difficult!!! see the above 
+
+# http://www.ahschulz.de/d013/07/23/installing-rmysql-under-windows/
+
+# http://genome.ucsc.edu/ for genome bioinformatics
+
+ucscDb <- dbConnect(MySQL(),user="genome",host="genome-mysql.cse.ucsc.edu")
+
+result <- dbGetQuery(ucscDb,"show databases;")dbDisconnect(ucscDb):#ALWAYS DISCONNECT!
+#True is returned to show you disconnected from database
+#always assign connection a handle name 
+#result in quotes is actually a MySQL command 
+result 
+#shows all DB for the MySQL server located at the host address. 
+
+hg19 <- dbConnect(MySQL(),user="genome",db="hg19",host="genome-mysql.cse.ucsc.edu")
+allTables<-dbListTables(hg19)#human genome 19th edition
+length(allTables)
+allTables[1:5]
+dbListFields(hg19,"affyU133Plus2") )
+#look into this database, what fields are in that table. 
+dbGetQuery(hg19, "select count(*) from affyU133Plus2")
+#returns count(*) ... shows number of rows 
+
+affyData<-dbReadTable(hg19, "affyU133Plus2")
+head(affyData)
+#extract data one table at a time 
+
+
+#often a huge amount of data stored. 
+#select only a subset
+
+query <- dbSendQuery(hg19,"select * from affyU133Plus2 where misMatches between 1 and 3")
+affyMis<-fetch(query); quantile(affyMis$misMatches)
+
+affyMisSmall<- fetch(query, n=10); dbClearResult(query);
+#returns TRUE
+dim(affyMisSmall)
+#first ten rows of that table
+#NEED TO CLEAR THE QUERY. dbClearResult(query) clears it from teh remote server. 
+
+dbDisconnect(hg19)
+#CLOSE YOUR CONNECTION!!!!!
+
+#as soon as you don't need, CLOSE YOUR CONNECTION!!!!!
+
+# http://cran.r-project.org/web/packages/RMySQL/RMySQL.pdf 
+#http://www.r-bloggers.com/mysql-and-r/ 
+
+
+
+#WEEK 2 LECTURE 2 
+
+#HDF5 
+#Hierarchical Data Format 5
+#Stores large data sets. Supports storing a range of data types. Groups containing zero or more data sets and meta data. 
+    #have a group header with group name and list of attributes 
+    #have group symbol table with a list of objects in group
+#datasets multidimensional array of data elements with metadata.
+    #have header with name, data type, data space, and storage layout
+    #have a data array with teh data. 
+# http://www.hdfgroup.org/ 
+
+#data stored in groups. 
+
+
+
+
+#Install it 
+
+source("http://bioconductor.org/biocLite.R")
+biocLite("rhdf5")
+
+library(rhdf5)
+created = h5createFile("example.h5")
+created 
+#returns TRUE 
+#see rhdf5 tutorial 
+
+created = h5createGroup("example.h5","foo")
+created = h5createGroup("example.h5","baa")
+created = h5createGroup("example.h5","foo/foobaa")#subgroup of foo called foobaa 
+h5ls("example.h5") 
+A = matrix(1:10,nr=5,nc=2)
+h5write(A,"example.h5","foo/A")#write matrix to a particular group. file, group within file. 
+B=array(seq(0.12.0,by=0.1),dim=c(5,2,2))#don't just need to do matrices. 
+attr(B,"scale") <- "liter"#add attributes 
+h5write(B, "example.h5","foo/foobaa/B")#h5write() will write this array to a particular sub group. 
+#what did we do? print it 
+h5ls("example.h5")
+
+df = data.frame(1L:5L,seq(0,1,length.out=5),
+    c("ab","cde","fghi","a","s"),stringsAsFactors=FALSE)
+    #created data frame, h5write writes it directly to teh top level group df 
+h5write(df, "example.h5","df")
+h5ls("example.h5")
+#writing and reading chunks...
+
+h5write(c(12,13,14),"example.h5","foo/A",index=list(1:3,1))
+h5read("example.h5","foo/A")
+
+
+
+
+
+
+#Lecture 3 Week 2 reading data from the web
+
+#streaming, api's, authentication
+
+#webscraping is extracting from teh html code of sites
+#many sites have info you may want to read programatically 
+#some websites say they don' twant to be scraped 
+#IP address can get blocked. be craeful with proprietary data 
+
+#google scholar page about Leek's papers 
+
+#readlines command is important
+
+con = url("http://scholar.google.com/citations?user=HI-I6C0AAAAJ&hl=en") #open a connection with url() 
+htmlCode = readLines(con) #can set no of lines 
+close(con)#make sure to close the connection after using it 
+htmlCode
+
+library(XML)
+url <- "http://scholar.google.com/citations?user=HI-I6C0AAAAJ&hl=en"
+html <- htmlTreeParse(url, useInternalNodes=TRUE)
+xpathSApply(html,"//title",xmlValue)
+#this one did not work ...   xpathSApply(html,"//td[@id='col-citedby']",xmlValue)
+
+library(httr); html2 = GET(url)
+content2 = content(html2, as="text")#extract content as text string 
+parsedHtml = htmlParse(content2,asText=TRUE) #same as xml package 
+xpathSApply(parsedHtml,"//title",xmlValue)#extract out title 
+
+pg1 = GET("http://httpbin.org/basic-auth/user/passwd",authenticate("user","passwd")) #won't allow you without password
+names(pg2)
+
+google = handle("http://google.com")
+pg1 = GET(handle=google,path="/")
+pg2 = GET(handle=google,path="search") 
+#cookies stay with handle so re-authentication is not necessary 
+
+#http://www.r-bloggers.com/?s=Web+Scraping
+
+
+
+
+## Week 2 lecture 4 API's 
+
+#application programming interfaces
+#get requests with specific URLs as arguments
+#use httr package to get data from these websites 
+
+#usually have to create an account with the development team of each organization. 
+
+# https://dev.twitter.com/apps 
+# create new application 
+# info OAuth settings will have keys 
+# copy them to use later 
+
+### from Twitter:
+#Access level	Read and write (modify app permissions)
+#Consumer Key (API Key)	TAkCDRwLoRMsEJq9LrDCj0Vwf (manage keys and access tokens)
+#Callback URL	None
+#Sign in with Twitter	Yes
+#App-only authentication	https://api.twitter.com/oauth2/token
+#Request token URL	https://api.twitter.com/oauth/request_token
+#Authorize URL	https://api.twitter.com/oauth/authorize
+#Access token URL	https://api.twitter.com/oauth/access_token
+
+#Consumer Key (API Key)	TAkCDRwLoRMsEJq9LrDCj0Vwf
+#Consumer Secret (API Secret)	kWUctBll7gxx05EDIJkCuJoRULj0RBd17UkuR6ZwC61bMlyAxK
+#Access Level	Read and write (modify app permissions)
+#Owner	paulmattheww
+#Owner ID	2402491467
+
+#Access Token	2402491467-ozL71fsXKtZykFjRyW7ZwpFyqQoqo9nijRX3l1x
+#Access Token Secret	aDTEaRb9Cls2AGdhSAuaPaJWIRIhTi4EXdVeyAQYnDYaT
+#Access Level	Read and write
+#Owner	paulmattheww
+#Owner ID	2402491467
+
+myapp = oauth_app("twitter",key="",secret="")
+
+sig = sign_oauth1.0(myapp,token="-",token_secret="") #starts authorization process, you name it for convenience "twitter". 
+#your credentials are established here 
+
+library(jsonlite)
+
+homeTL = GET("https://api.twitter.com/1.1/statuses/home_timeline.json", sig) #twitter's api URL 
+
+json1 = content(homeTL) #extracts data, recognizes JSON 
+json2 = jsonlite::fromJSON(toJSON(json1))#reformat to data frame from json using json lite 
+json2[1,1:4] #actually create data frame. each row corresponds to a tweet. first four col is times, ids, text of tweet
+
+
+#how did we know which URL to use?
+# https://dev.twitter.com/docs/api/1.1/get/search/tweets
+
+#resource url is in middle of page, which you pass to teh get command 
+
+#httr allows get, post, put, delete requests if authorized. 
+
+#authenticate with un pw .. most modern api use oauth 
+#httr works well with facebook, gogle, twitter, github, etc 
+
+
+
+
+
+
+## Reading data from other sources Lecture 5 Week 2 
+
+#many R packages to acces data. 
+
+#file function that is on computer. gz file and bz file for zipped files 
+
+?connections 
+
+#foreign package for other programming languages
+
+read.arff(Weka)
+read.dta(Stat)
+read.mtp(Minitab)
+read.octave(Octave)
+read.spss(SPSS)
+read.xport(SAS)
+
+#many database packages postgresql, RODBC multiple interface db, SQLite, RMongo 
+
+#each is dependent on syntax of the database it is stored in 
+
+#jpeg, readbitmap, png, EBImage ... 
+
+#GIS data rdgal, rgeos, raster
+
+#music data DIRECTLY FROM MP3 !!! tuneR and seewave
+# http://cran.r-project.org/web/packages/tuneR/
+# http://rug.mnhn.fr/seewave/ 
+
+
+
+
+
+#################################################################################################################
+## Quiz 2 
+
+#Github API 
+#Client ID
+#7d056219eeaed12cfa70
+#Client Secret
+#ac39418021b00ad0088c825fdac452029c37b627
+
+# 1. Find OAuth settings for github:
+#    http://developer.github.com/v3/oauth/
+
+library(httr)
+oauth_endpoints("github")
+
+# 2. Register an application at https://github.com/settings/applications;
+#    Use any URL you would like for the homepage URL (http://github.com is fine)
+#    and http://localhost:1410 as the callback url
+#
+#    Insert your client ID and secret below - if secret is omitted, it will
+#    look it up in the GITHUB_CONSUMER_SECRET environmental variable.
+myapp <- oauth_app("github","","")
+
+install.packages("httpuv")
+library(httpuv)
+# 3. Get OAuth credentials
+github_token <- oauth2.0_token(oauth_endpoints("github"), myapp)
+
+# 4. Use API
+gtoken <- config(token = github_token)
+req <- GET("https://api.github.com/rate_limit", gtoken)
+stop_for_status(req)
+content(req)
+
+# OR:
+req <- with_config(gtoken, GET("https://api.github.com/rate_limit"))
+stop_for_status(req)
+content(req)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
