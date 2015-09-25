@@ -1,11 +1,16 @@
 ---
-title: "Practical Machine Learning: Prediction Assignment"
+title: "Machine Learning: Human Activity Recognition"
 author: "Paul M. Washburn"
 date: "September 2015"
 output: html_document
 ---
 
 # Overview
+### Introduction
+This is an assignment in the course Practical Machine Learning, which is course number 8 of 10 in Johns Hopkins Data Science Specialization. 
+
+The [Human Activity Recognition](http://groupware.les.inf.puc-rio.br/har) (HAR) dataset is a large compilation of metrics describing the movement patterns of certain individuals. 
+
 ### Background
 Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
 
@@ -22,7 +27,7 @@ Due to security concerns with the exchange of R code, your code will not be run 
 
 # Data Acquisition
 Load the libraries necessary.
-```{r}
+```{r echo=FALSE}
 library(caret)
 library(corrplot)
 ```
@@ -31,13 +36,10 @@ library(corrplot)
 Download the [training](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv) and [testing](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv) datasets from their source and load into R. 
 ```{r}
 setwd("C:/Users/pmwash/Desktop/R_Files")
-
 path <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
 download.file(path, destfile="training.csv")
-
 path <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 download.file(path, destfile="testing.csv")
-
 training <- read.csv("training.csv", header=TRUE, 
                      na.strings=c("", "NA", "NULL", "#DIV/0!"))
 testing <- read.csv("testing.csv", header=TRUE 
@@ -53,6 +55,30 @@ summary(training)
 
 The training dataset contains 19622 observations of 160 variables. Many of the variables have NA values, which we will exclude below.
 ```{r}
-trainingSubset <- training[, apply(training, 2, function(x) !any(is.na(x)))]
+dirty <- sapply(training, function (x) any(is.na(x) | x==""))
+clean <- training[, apply(training, 2, function(x) !any(is.na(x)))]
+cleanPredictors <- !dirty & grepl("belt|[^(fore)]arm|dumbbell|forearm", names(dirty))
+potentialPredictors <- names(dirty)[cleanPredictors]
+```
+
+
+```{r}
+corr <- corrplot(clean, order="FPC", method="color", type="lower", tl.cex=0.8, tl.col=rgb(0,0,0))
 
 ```
+
+
+
+
+
+
+
+
+
+
+LOOK UP CORR PLOT
+
+
+
+
+
