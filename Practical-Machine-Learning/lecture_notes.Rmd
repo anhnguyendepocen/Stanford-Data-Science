@@ -181,11 +181,11 @@ In general, positive and negative refer to belonging to a class.
   * True negative => Correctly rejected (it was indeed -)
   * False negative => incorrectly rejected (it was actually +)
 
-Sensitivity = P(+|D) = TP / (TP + FN)
-Specificity = P(-|d) = TN / (FP + TN)
-Positive Predictive Value = P(D|+) = TP / (TP + FP)
-Negative Predictive Value = P(d|-) = TN / (FN + TN)
-Accuracy = P(correct outcome) = (TP + TN) / (TP + FP + FN + TN)
+  * Sensitivity = P(+|D) = TP / (TP + FN)
+  * Specificity = P(-|d) = TN / (FP + TN)
+  * Positive Predictive Value = P(D|+) = TP / (TP + FP)
+  * Negative Predictive Value = P(d|-) = TN / (FN + TN)
+  * Accuracy = P(correct outcome) = (TP + TN) / (TP + FP + FN + TN)
 
 Screening tests - one class is MUCH more rare than the rest. Suppose we have 99% sensitivity and 99% specificity. Suppose you get a positive test? What is the probability you actually have the disease. 
 
