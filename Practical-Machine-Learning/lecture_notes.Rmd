@@ -1,0 +1,387 @@
+---
+title: "Practical Machine Learning"
+author: "Paul Washburn"
+date: "September 2015"
+output: pdf_document
+---
+
+## Machine Learning & Prediction Motivation
+
+Data science has become a [sport](https://www.kaggle.com/). 
+
+A great book is the Elements of Statistical Learning. This course will rely heavily on the caret package in R. For deeper knowledge check out the Stanford course on Machine Learning as well as the Machine Learning specialization through Coursera. Also, Kaggle holdes competitions in data science. 
+
+What is prediction? 
+
+Start with a question, seek input data, features, algorithm parameters, and evaluate the model. The first question should be general (eg. can I automatically detect SPAM email?) then further refined (eg. what characteristics of emails can I use to predict whether a given email is SPAM?)
+
+Spam example below.
+
+```{r}
+library(kernlab)
+data(spam)
+head(spam, 2)
+```
+
+Let's look at the frequency of the word "your".
+```{r}
+plot(density(spam$your[spam$type=="nonspam"]),
+     col="blue", main="", xlab="Frequency of 'your'")
+lines(density(spam$your[spam$type=="spam"],col="red"))
+```
+Note that spam emails have higher density of the word "your". We can now write a prediction algorithm based on this information. This will ask: if `freqYour > C, predict SPAM`. 
+```{r}
+plot(density(spam$your[spam$type=="nonspam"]),
+     col="blue", main="Frequency of 'your' in emails",
+     xlab="Frequency of 'your'")
+lines(density(spam$your[spam$type=="spam"]), col="red")
+abline(v=0.5, col='black')
+```
+Notice the cutoff. Above 0.5, SPAM! 
+
+Now we need to evaluate how good we did.
+```{r}
+prediction <- ifelse(spam$your > 0.5, "spam", "nonspam")
+table(prediction,spam$type)/length(spam$type)
+```
+We notice here that we have 75.1% accuracy, nonspam is predicted correctly 45% of the time and spam is predicted correctly 29% of the time. This is likely an optimistic view of the error rate!
+
+
+
+
+## The Relative Order of Importance
+Question > Data > Features > Algorithms
+
+A concrete and specific question is very important. Data must be available. 
+
+Image and voice data are strange. 
+
+"The combination of some data and an aching desire for an answer does not ensure that a reasonable answer can be extracted from a given body of data." -John Tukey
+
+KNOW WHEN TO GIVE UP! Garbage in -> garbage out.
+
+Gene expression to predict disease? What features should you collect to predict? Often, more data leads to better models. Make sure it is RELEVANT!
+
+Features matter a great deal.
+
+Properties of good features:
+  * Lead to data compression
+  * Retain relevant information 
+  * Are created based on EXPERT APPLICATION KNOWLEDGE
+  
+Common mistakes:
+  * Trying to automate feature selection
+  * Not paying attention to data-specific quirks
+  * Throwing away information unnecessarily
+  
+If you have to automate feature selection, do so with care. Discovering features of youtube videos; still went back and looked at why it would be a good predictor (image of cat).
+
+Algorithms matter less than you think.
+
+Linear regression will get you most of the way there; best method will improve marginally on it. 
+
+Algorithms must be interpretable. It should also be SIMPLE and easy to explain. They must be accurate and fast (easy to build and test). But most of all, it must be SCALABLE. 
+
+Prediction is about accuracy tradeoffs. 
+  * Interpretability versus accuracy
+  * Speed versus accuracy
+  * Simplicity versus accuracy
+  * Scalability versus accuracy
+  
+The Netflix challenge needed to be scalable; the best models did not win. Accuracy is not the ONLY factor. 
+
+  
+  
+## In Sample and Out of Sample Error
+IN SAMPLE ERROR is the error rate you get on the same data you used to build your predictor. Referred to as resubstitution error. 
+
+OUT OF SAMPLE ERROR is the error rate you get on a new data set. This is referred to as generalization error. 
+
+Key ideas:
+  * Out of sample error is what you care about
+  * In sample error < out of sample error
+  * The reason is overfitting - matching your algorithm to current data
+```{r}
+library(kernlab); data(spam); set.seed(333)
+smallSpam <- spam[sample(dim(spam)[1],size=10),] #ten message sample
+spamLabel <- (smallSpam$type=="spam")*1 + 1 #avg no of capital letters
+plot(smallSpam$capitalAve, col=spamLabel) # spam has more CAPS
+```
+If the capitalAverage > 2.7. 
+
+We have trained the dataset; so now lets see how effective it is on the entire data set.
+```{r}
+rule1 <- function(x) {
+  prediction <- rep(NA, length(x))
+  prediction[x > 2.7] <- "spam"
+  prediction[x < 2.40] <- "nonspam"
+  prediction[(x >= 2.40 & x <= 2.45)] <- "spam"
+  prediction[(x > 2.45 & x <= 2.70)] <- "nonspam"
+  return(prediction)
+}
+table(rule1(spam$capitalAve), spam$type)
+```
+Let's look at another rule that doesn't have a 100% accuracy rate when using our training data set.  
+```{r}
+rule2 <- function(x) {
+  prediction <- rep(NA, length(x))
+  prediction[x > 2.8] <- "spam"
+  prediction[x <= 2.8] <- "nonspam"
+  return(prediction)
+}
+table(rule1(spam$capitalAve), spam$type)
+mean(rule1(spam$capitalAve)==spam$type)
+```
+Overall it's more simplistic. Let's see how it fares on the rest of the data. 
+
+What is the average number of times we were right with our more complicated model?
+```{r}
+sum(rule1(spam$capitalAve)==spam$type)
+```
+
+What is the average number of times we were right with our more simplistic model?
+```{r}
+sum(rule2(spam$capitalAve)==spam$type)
+```
+
+The simplified rule does better. There is always SIGNAL and NOISE. The goal of a predictor is to find signal. You can always design a perfect in-sample predictor. You capture both signal and noise when you do that. Predictor won't perform as well on new samples as a result. This is OVERFITTING. Watch out for it. 
+
+
+
+## Prediction Study Design
+
+Define error rate -> Split data into train/test/validation -> On training set, pick features (use cross-validation) -> On training set, pick prediction function (use cross-validation) -> If no validation, apply 1x to test set -> If validation, apply to test set and refine; apply 1x to validation.
+
+Know the benchmarks!
+
+Prediction benchmarks will give you an idea of when your algorithm is going astray.
+
+Avoid small sample sizes. 
+
+Rules of thumb:
+  * 60% train, 20% test 20% validation
+  * Or 60/40 without refining model
+  * Small sample size? Do cross validation; report caveat that you haven't tested.
+  
+Principles:
+  * Set test/validation data aside and don't look at it
+  * In general, randomly sample training and test data
+  * Your data must reflect the structure of the problem -- IF predictions evolve with time, then split train/test in time chunks (called "backtesting" in finance)
+  * All subsets should reflect as much diversity as possible (random assignment does this)
+  
+
+
+## Types of Errors
+
+Binary prediction: Sensitivity and Specificity.
+
+In general, positive and negative refer to belonging to a class. 
+  * True positive => Correctly identified (it was indeed +)
+  * False positive => Incorrectly identified (it was actually -)
+  * True negative => Correctly rejected (it was indeed -)
+  * False negative => incorrectly rejected (it was actually +)
+
+Sensitivity = P(+|D) = TP / (TP + FN)
+Specificity = P(-|d) = TN / (FP + TN)
+Positive Predictive Value = P(D|+) = TP / (TP + FP)
+Negative Predictive Value = P(d|-) = TN / (FN + TN)
+Accuracy = P(correct outcome) = (TP + TN) / (TP + FP + FN + TN)
+
+Screening tests - one class is MUCH more rare than the rest. Suppose we have 99% sensitivity and 99% specificity. Suppose you get a positive test? What is the probability you actually have the disease. 
+
+There's a LOT more people who are healthy, orders of magnitude more. 
+
+If you are predicting a rare event, you need to have a good handle on how rare it is. For example, mammograms and prostate screening. It is hard to know the fraction of false positives. 
+
+Mean Squared Error is squared so all numbers are positive. To interpret you want to take the root just like standard deviation. 
+
+MSE = 1/n * sum(Predictioni - Truthi)^2
+RMSE = sqrt(MSE)
+
+Some common error measures:
+  * MSE or RMSE: continuous data, sensitive to outliers
+  * Median absolute deviation MAD: continuous data, often more robust
+  * Sensitivity (recall): if you want few missed positives
+  * Specificity: if you want few negatives called positives.
+  * Accuracy: weights false positives/negatives equally
+  * Concordance: an example is KAPPA
+
+
+
+## ROC Curves - Receiver Operating Characteristic Curves
+
+Commonly used for quality of prediction algorithm. 
+
+Predict if someone is alive/dead, click/won't. Probability of alive, probability of click. The cutoff you choose gives different results!
+
+On x axis you plot 1-specificity (pr(false positive)), and on y axis plot the sensitivity (pr(true positive)).
+
+They're making a curve where all points correspond to exactly one cutoff. Defines whether an algorithm is good or bad. 
+
+The NetChop algorithm. 1-specificity is 0.2 and 0.4 sensitive - meaning it's not as sensitive as it is specific. 
+
+If the area under curve (AUC) = 0.5 it is random guessing; AUC = 1 is a perfect classifier. In general an AUC of above 0.8 is considered good. 
+
+How do you tell if an ROC curve is good or not? 45 degree curve is just guessing.  A perfect classifier is at coordinate (0,1) meaning you are closer to the upper left hand corner of the plot... further to the lower right indicates a very bad ROC curve.
+
+
+
+
+## Cross Validation
+
+One of the most widely used tools for detecting relevant features and building models/estimating their parameters when doing machine learning. 
+
+Recall that data gets split 60/20/20.
+
+Key ideas:
+  * Accuracy on the training set (resubstitution accuracy) is OPTIMISTIC
+  * A better estimate comes from an independent set (test set accuracy)
+  * But we can't use the test set when building the model or it becomes part of the training set
+  * So we estimate the test set accuracy with teh training set
+  
+Cross-validation:
+
+Approach: (1) Use training set (2) split into training/test sets (3) build model on training set (4) evaluate on the test set (5) repeat and average the estimated errors
+
+Used for: (1) Picking variables to include in a model (2) picking the type of prediction function to use (3) picking the parameters in the prediction function (4) comparing different predictors
+
+Random subsampling: we can build a model on random subsamples, then test on the rest. Then average errors.
+
+K-fold classification: idea is to break data into k equal sized datasets. Imagine line split in thirds. Build model on second two thirds and test it on the first. Then build a model on the first and third thirds and test it on the middle third. Finally build model on first two thirds and test it on the final third. 
+
+Leave one out: predict the sample we left out, and repeat until are have been cycled through.
+
+Considerations:
+  * For time series data, "chunks" must be used
+  * For k-fold cross-validation (1) larger k = less bias/more variance; (2) smaller k = more bias/less variance
+  * Random sampling must be done WITHOUT REPLACEMENT
+  * Random sampling with replacement is the bootstrap (1) underestimating the error; (2) can be corrected, but it is complicated (0.632 Bootstrap)
+
+
+
+## Choosing Correct Data
+
+To predict Y, use data that is as closely related to Y as you possibly can. (On base percent for baseball wins).
+
+The looser the connection means the harder it is to predict. 
+
+Data properties matter. Think about chocolate consumption versus nobel laureates in a given nation, a very naive approach. 
+
+
+## The Caret Package
+
+Caret can be used to pre-process/clean data, split data, create a data partition, create a resample, create time slices, training/testing functions, prediction, model comparison, and confusion matrix. 
+
+There are many machine learning algorithms in R, including Linear discriminant analysis, Naive Bayes, Support vector machines, Classification and regression trees, Random forests, and Boosting.
+
+Returning to our Spam eample, let's split out training and testing data. 
+```{r}
+library(caret); data(spam)
+inTrain <- createDataPartition(y=spam$type, 
+                               p=0.75, list=FALSE)
+training <- spam[inTrain,]
+testing <- spam[-inTrain,]
+dim(training)
+```
+Now we can fit a model.
+```{r}
+set.seed(32343)
+modelFit <- suppressWarnings(train(type~., data=training, method="glm"))
+modelFit
+```
+Once we fit themodel we can look at it more closely.
+```{r}
+modelFit$finalModel
+```
+Then you can predict on new samples using the `predict()` command. 
+```{r}
+predictions <- predict(modelFit, newdata=testing)
+head(predictions, 20)
+```
+Looking now at the confusion matrix for validation.
+```{r}
+confusionMatrix(predictions, testing$type) #predict vs actual y variable
+```
+
+
+
+## Data Slicing (Week 2)
+Use data slicing for building training and test data sets right at beginning of prediction function creation or for cross-validation or boot strapping within training set to evaluate models. 
+
+SPAM example, data splitting.
+```{r}
+library(caret); library(kernlab); data(spam)
+inTrain <- createDataPartition(y=spam$type, p=0.75, list=FALSE)
+training <- spam[inTrain,]
+testing <- spam[-inTrain,]
+dim(training)
+```
+Trying to predict SPAM or HAM. How many times a particular word appears or how often capital letters are detected. 
+
+Tell it which outcome to split on (based on type); 75% allocated to training and 25% to the testing set. The inTrain variable gets assigned an indicator function to subset out training and test set. 
+
+SPAM Example, K-fold.
+```{r}
+set.seed(32323)
+folds <- createFolds(y=spam$type, k=10, list=TRUE, returnTrain=TRUE)
+sapply(folds, length)
+folds[[1]][1:10] #this looks at which samples appeared in the first fold, take the first element of the folds list, look at the first ten elements. This one is split up in order, so the first ten are 1 through 10
+```
+createFolds function in caret function gets passed the outcome you want ot split on (spam variable). Then tell it number of folds. List = TRUE will return each set of indices according to a particular fold. 
+
+sapply(folds, length) splits the data set up into ten folds where each fold has the same number of samples. 
+
+SPAM example, Return Test
+Returns just the test set samples, much smaller sample in each fold because most samples are going to training set. 
+```{r}
+folds <- createFolds(y=spam$type, k=10, list=TRUE, returnTrain=FALSE) #note FALSE
+sapply(folds, length)
+folds[[1]][1:10]
+```
+
+SPAM example, Resampling
+```{r}
+set.seed(32323)
+folds <- createResample(y=spam$type, times=10, list=TRUE) #list vector or matrix output
+sapply(folds, length)
+folds[[1]][1:10] #resampling you get some of the same values back
+```
+
+SPAM example, Time Slices for forecasting. 
+```{r}
+set.seed(32323)
+tme <- 1:1000 #time vector 1 to 10000
+folds <- createTimeSlices(y=tme, initialWindow=20, horizon=10) #slices with window of 20 samples, predict next ten samples out after taking intiial window of 20
+names(folds)
+folds$train[[1]] #20 values in first training set
+folds$test[[1]] #10 values in test set 21 - 30
+```
+
+Check out [caret tutorials](http://www.edii.uclm.es/~useR-2013/Tutorials/kuhn/user_caret_2up.pdf). Also check out the [paper introducing the caret package](http://www.jstatsoft.org/v28/i05/paper). Finally, [CRAN](http://cran.r-project.org/web/packages/caret/vignettes/caret.pdf) also has a great package overview.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
