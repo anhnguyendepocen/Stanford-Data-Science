@@ -4,7 +4,7 @@ author: "Paul Washburn"
 date: "September 2015"
 output: pdf_document
 ---
-
+# Week 1
 ## Machine Learning & Prediction Motivation
 
 Data science has become a [sport](https://www.kaggle.com/). 
@@ -267,7 +267,7 @@ The looser the connection means the harder it is to predict.
 
 Data properties matter. Think about chocolate consumption versus nobel laureates in a given nation, a very naive approach. 
 
-
+# Week 2
 ## The Caret Package
 
 Caret can be used to pre-process/clean data, split data, create a data partition, create a resample, create time slices, training/testing functions, prediction, model comparison, and confusion matrix. 
@@ -305,7 +305,7 @@ confusionMatrix(predictions, testing$type) #predict vs actual y variable
 
 
 
-## Data Slicing (Week 2)
+## Data Slicing 
 Use data slicing for building training and test data sets right at beginning of prediction function creation or for cross-validation or boot strapping within training set to evaluate models. 
 
 SPAM example, data splitting.
