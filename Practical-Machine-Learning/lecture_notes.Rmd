@@ -193,6 +193,8 @@ There's a LOT more people who are healthy, orders of magnitude more.
 
 If you are predicting a rare event, you need to have a good handle on how rare it is. For example, mammograms and prostate screening. It is hard to know the fraction of false positives. 
 
+
+
 Mean Squared Error is squared so all numbers are positive. To interpret you want to take the root just like standard deviation. 
 
 MSE = 1/n * sum(Predictioni - Truthi)^2
@@ -360,12 +362,106 @@ folds$test[[1]] #10 values in test set 21 - 30
 Check out [caret tutorials](http://www.edii.uclm.es/~useR-2013/Tutorials/kuhn/user_caret_2up.pdf). Also check out the [paper introducing the caret package](http://www.jstatsoft.org/v28/i05/paper). Finally, [CRAN](http://cran.r-project.org/web/packages/caret/vignettes/caret.pdf) also has a great package overview.
 
 
+## Training Options
+Brief lectures, training control options. 
 
+```{r}
+library(caret); library(kernlab); data(spam)
+head(spam, 3)
+inTrain <- createDataPartition(y=spam$type, p=0.75, list=FALSE) #create indices for training set, 75% in training set
+training <- spam[inTrain,]
+training <- spam[-inTrain,]
+modelFit <- train(type ~., data=training, method='glm')
+summary(modelFit)
+```
+##### Training Options
+```{r}
+args(train.default) #args function shows arguments; use it more often
+```
+Default metric is Accuracy for categorical variables; for continuous it is RMSE. You can set a large number of control parameters using trControl using trainControl(). 
 
+Metric options for continuous outcomes include root mean squared error, or R-squared from regression models (measure of linear agreement; not great for random forests just linear regression). 
 
+For Categorical outcomes, accuracy is the fraction correct and Kappa is a measure of concordance (an alphabetical list of the words (especially the important ones) present in a text, usually with citations of the passages concerned).
 
+```{r}
+args(trainControl)
+```
+trainControl resampling method
+  * boot = bootstrapping
+  * boot632 = bootstrapping with adjustment (reduces bias from boostrapping)
+  * cv = cross validation
+  * repeatedcv = repeated cross validation
+  * LOOCV = leave one out cross validation
+number
+  * for boot/cross validation
+  * Number of subsamples to take
+repeats
+  * Number of times to repeat subsampling
+  * If big, this can slow things down!
 
+##### Setting the Seed
+An important component of training these models is setting an overall seed. The computer generates pseudorandom numbers when you set the seed; the same sequence gets reproduced. 
+  * You can set the seed for each resample
+  * Seeding each resample is useful for parallel fits
+```{r}
+set.seed(12345)
+modelFit2 <- train(type~., data=training, method='glm')
+modelFit2
+```
 
+## Plotting Predictors
+One of the most important components of building a machine learning algorithm (or 'prediction model') is understanding how the data actually looks and interacts with each other. 
+
+Wages data from the ISLR package from the book Intro to Statistical Learning. 
+
+```{r}
+library(ISLR); library(ggplot2); library(caret)
+data(Wage)
+summary(Wage)
+```
+Get training/test sets.
+```{r}
+inTrain <- createDataPartition(y=Wage$wage, p=0.7, list=FALSE)
+training <- Wage[inTrain,]
+testing <- Wage[-inTrain,]
+dim(training); dim(testing)
+```
+Feature plot (caret).
+```{r}
+featurePlot(x=training[,c('age','education','jobclass')],
+            y=training$wage,
+            plot='pairs')
+qplot(age, wage, data=training)
+qplot(age, wage, colour=jobclass, data=training)
+qq <- qplot(age, wage, colour=education, data=training)
+qq + geom_smooth(method='lm', formula=y~x)
+```
+
+cut2, making facotrs (Hmisc package)
+```{r}
+library(Hmisc)
+cutWage <- cut2(training$wage, g=3)
+table(cutWage)
+p1 <- qplot(cutWage, age, data=training, fill=cutWage,
+            geom=c('boxplot', 'jitter'))
+p1
+```
+Tables, use factorized versions of continuous data.
+```{r}
+t1 <- table(cutWage, training$jobclass)
+t1
+prop.table(t1,1)
+```
+And density plots to represent continuums. They reveal things you don't always expect!
+```{r}
+qplot(wage, colour=education, data=training, geom='density')
+```
+Only plot training data. Don't use test set for exploration! 
+  * Imbalance of outcomes/predictors
+  * Outliers
+  * Groups of points not explained by a predictor
+  * Skewed variables
 
 
 
