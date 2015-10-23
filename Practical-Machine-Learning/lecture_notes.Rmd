@@ -464,11 +464,99 @@ Only plot training data. Don't use test set for exploration!
   * Skewed variables
 
 
+## Preprocessing Predictor Variables
+Check for weird behavior. Distribution strange? Transformation needed? 
 
+Particularly true when using model-based algorithms.
 
+##### Why Preprocess?
+We only look at training set. (Remember?)
 
+How many capitals in a row do we see? Almost all run-lengths are very small; a few are much larger. If you take the mean, it is 4.7. Standard deviation is a huge SD.
+```{r}
+library(caret); library(kernlab); data(spam)
+inTrain <- createDataPartition(y=spam$type, p=0.75, list=FALSE)
+training <- spam[inTrain,]
+testing <- spam[-inTrain,]
+hist(training$capitalAve, main='localbuttcheeks', xlab='ave. capital run length')
+mean(training$capitalAve)
+sd(training$capitalAve)
+```
+Do some sort of preprocessing so algorith is not tricked. 
 
+##### Standardize variables. 
+```{r}
+trainCapAve <- training$capitalAve
+trainCapAveS <- (trainCapAve - mean(trainCapAve)) / 
+  sd(trainCapAve)
+mean(trainCapAveS)
+sd(trainCapAveS)
+```
+Standardizing the test set is a bit different.
 
+The mean is not 0 and sd is not 1 exactly, but hopefully they will be close!p
+```{r}
+testCapAve <- testing$capitalAve
+testCapAveS <- (testCapAve - mean(trainCapAve)) / sd(testCapAve)
+mean(testCapAveS)
+sd(testCapAveS)
+```
+The preProcess function can do a lot of the standardization for you. 
+
+The code below will take all variables except the predictee (y) and standardize (center) them as well as scale them. 
+```{r}
+preObj <- preProcess(training[,-58], 
+                     method=c('center', 'scale'))
+trainCapAveS <- predict(preObj, training[,-58])$capitalAve
+mean(trainCapAveS)
+sd(trainCapAveS)
+```
+You can use the object created by the preProcess function  to apply to the test set. 
+```{r}
+testCapAveS <- predict(preObj, testing[,-58])$capitalAve
+mean(testCapAveS)
+sd(testCapAveS)
+```
+You can pass the preProcess command directly to the train command as an argument.  
+```{r}
+set.seed(32343)
+modelFit <- train(typ~., data=training, preProcess=c('center','scale'), method='glm')
+modelFit
+```
+You can also do other kinds of transformations. BoxCox is a set of transformations that take continuous data and make them look normal, using maximum likelihood. Now you see histogram looking more normal. This takes care of the issues that come with data that is highly skewed.
+```{r}
+preObj <- preProcess(training[,-58], method=c('BoxCox'))
+trainingCapAveS <- predict(preObj, training[,-58])$capitalAve
+par(mfrow=c(1,2)); hist(trainCapAveS); qqnorm(trainCapAveS)
+```
+##### Standardizing by Imputing Data 
+It is common to have missing data. You can impute using K nearest neighbors imputation. We want reproducible results, remember?
+
+After we set some values to be NA's we want to impute what is missing.
+```{r}
+library(RANN)
+set.seed(13343)
+
+# Make some values NA
+training$capAve <- training$capitalAve
+selectNA <- rbinom(dim(training)[1], size=1, prob=0.5) == 1
+training$capAve[selectNA] <- NA # NA added randomly
+
+# Impute and standardize
+preObj <- preProcess(training[,-58], method='knnImpute') #Average the nearest neighbors
+capAve <- predict(preObj, training[,-58])$capAve
+
+# Standardize true values
+capAveTruth <- training$capitalAve
+capAveTruth <- (capAveTruth - mean(capAveTruth)) / sd(capAveTruth)
+```
+Now we can check to see how well we did.
+```{r}
+quantile(capAve - capAveTruth)
+quantile((capAve - capAveTruth)[selectNA])
+quantile((capAve - capAveTruth)[!selectNA])
+```
+Remember, training and test sets must be processed in the SAME WAY! The test set transformations will be imperfect. Be careful transforming FACTORS! Check out more on preprocessing in the caret package. 
 
 
 
