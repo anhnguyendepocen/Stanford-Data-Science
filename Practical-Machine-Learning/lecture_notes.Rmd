@@ -520,7 +520,7 @@ sd(testCapAveS)
 You can pass the preProcess command directly to the train command as an argument.  
 ```{r}
 set.seed(32343)
-modelFit <- train(typ~., data=training, preProcess=c('center','scale'), method='glm')
+modelFit <- train(type~., data=training, preProcess=c('center','scale'), method='glm')
 modelFit
 ```
 You can also do other kinds of transformations. BoxCox is a set of transformations that take continuous data and make them look normal, using maximum likelihood. Now you see histogram looking more normal. This takes care of the issues that come with data that is highly skewed.
@@ -557,6 +557,116 @@ quantile((capAve - capAveTruth)[selectNA])
 quantile((capAve - capAveTruth)[!selectNA])
 ```
 Remember, training and test sets must be processed in the SAME WAY! The test set transformations will be imperfect. Be careful transforming FACTORS! Check out more on preprocessing in the caret package. 
+
+
+## Covariate Creation
+Predictors or features are the variables you will actually include in the model to combine and predict interested outcome.
+
+
+Two levels of covariate creation. 
+  * Level 1: From raw data to covariate
+  * Level 2: Transforming tidy covariates
+  
+```{r}
+library(kernlab); data(spam)
+#spam$capitalAveSq <- spam$CapitalAve^2  [didnt work]
+```
+Summarize information into a useful format. Take raw data and turn it into FEATURES, describing the data as much as possible. 
+
+Suppose you have an email. It is hard to plug the email itself into a prediction function; free text is trickier than that. Create some features; variables that describe the raw data. In an email, average capital sequences in email, frequency of words, number of '$' signs, all describe data. Involves a lot of htinking of the data's structure; what is the right way to extract the most information in the fewest variables.
+
+Transforming variables into more useful variables is tidying the covariates. For example, what proportion of the total email is capital?
+```{r}
+library(kernlab); data(spam)
+spam$capitalAveSq <- spam$capitalAve^2
+```
+###### Level 1: Transform from Raw to Covariates
+  * Depends heavily on application
+  * The balancing act is summarization vs. information loss (discard the irrelevant)
+  * Examples:
+    * Text files: frequency of words, frequency of phrases (Google ngrams), frequency of CAPS
+    * Images: edges, corners, blobs, ridges (computer vision feature detection)
+    * Webpages: Number and type of images, position of elements, colors, videos (A/B Testing)
+    * People: height, weight, hair color, sex, country of origin, vocal characteristics, eyes
+  * The more knowledge of the system you have the better job you will do
+  * When in doubt, err on the side of more features
+  * Can be automated, but use CAUTION!
+
+The more knowledge of the system, the better you will be at feature extraction. Err on the side of more features then filter them out as you build your model.
+
+##### Level 2: Turning Tidy Covariates into New Covariates
+  * More necessary for some methods (regression, support vector machines that depend on the distribution of the data) than for others (classification trees)
+  * Should be done ONLY on the training set
+  * The best approach is through exploratory analysis (plotting & tables)
+  * New covariates should be added to data frames for use in downstream prediction
+  * Make sure you have the right covariates! 
+
+Load example data.
+```{r}
+library(ISLR); library(caret); data(Wage)
+inTrain <- createDataPartition(y=Wage$wage, p=0.7, list=FALSE)
+training <- Wage[inTrain, ]
+testing <- Wage[-inTrain,]
+```
+
+##### Common Covariates: Dummy Variables
+Basic idea is to convert factor variables to indicator variables. Suppose we have a variable like job class, industrial or information job. We turn it into a quantititative variable where they have either 0 or 1 as a value. 
+```{r}
+table(training$jobclass)
+dummies <- dummyVars(wage ~ jobclass, data=training)
+head(predict(dummies, newdata=training))
+```
+
+###### Removing Zero Covariates
+Identify variables that have very little variability and will likely be poor predictors. Tells us percentage of unique values (e.g. .33% unique values, not a near zero variance variable). Sex has a loq frequency ratio because it's all dudes. Near zero variable that are TRUE should be discarded. Sex and Region should be discarded (see below). 
+```{r}
+nsv <- nearZeroVar(training, saveMetrics=TRUE)
+nsv
+```
+
+###### Spline Basis
+For linear regression or glm. Creates a polynomial variable (e.g. a third degree polynomial variable). Three new variables correspond to age (scaled), age-squared, and age-cubed. This allows for curvy model fitting.
+```{r}
+library(splines)
+bsBasis <- bs(training$age, df=3)
+head(bsBasis, 50)
+```
+
+###### Fitting Curves with Splines
+bsBasis is all the predictors from the polynomial model. Then we plot wage versus age data which has a curvilinear relationship. 
+```{r}
+lm1 <- lm(wage ~ bsBasis, data=training)
+plot(training$age, training$ wage, pch=19, cex=0.5)
+points(training$age, predict(lm1, newdata=training), col='red', pch=19, cex=0.5)
+```
+
+###### Splines on the Test Set
+On the test set, you will have to predict the same variables. You have to create the covariates on the test set with the exact same procedure as you used on the training set. So we have to predict a new set of values. The bs function creates a new set of variables that may introduce some bias. 
+```{r}
+predict(bsBasis, age=testing$age)
+```
+
+##### Notes and Further Reading
+* Level 1 feature creation (raw data to covariates)
+  * Science is key. Google 'feature extraction for [data type]'
+  * Err on overcreation of features
+  * In some applications (images, voices) automated feature creation is possible and/or necessary
+  * Check out [NYU's site on the subject](http://www.cs.nyu.edu/~yann/talks/lecun-ranzato-icml2013.pdf)
+* Level 2 feature creation (covariates to new covariates)
+  * The function preProcess in caret will handle some preprocessing
+  * Create new covaraites if you think they will improve fit
+  * Use exploratory analysis on the training set for creating them
+  * Be careful about OVERFITTING!
+* Learn more about pre-processing in caret
+* If you want to fit spline models, use 'gam' method in caret which allows smoothing of multiple variables
+* More feature creation/data tidying in the 'Obtaining Data' course from Data School
+
+
+
+
+
+
+
 
 
 
