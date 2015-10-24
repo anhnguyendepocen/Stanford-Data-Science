@@ -37,7 +37,7 @@ The 5 classes of interest include: sitting down, standing up, standing, walking 
   * Baseline performance index is also established
   * This dataset is licensed under the Creative Commons license (CC BY-SA)
     
-# Data Acquisition, Exploration and Reduction
+# Data Acquisition, Exploration and Feature Reduction
 Load the libraries necessary and set the seed for reproducibility.
 ```{r}
 set.seed(8008135)
@@ -52,16 +52,16 @@ path <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
 #download.file(path, destfile="training.csv")
 path <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 #download.file(path, destfile="testing.csv")
-training <- read.csv("training.csv", header=TRUE, 
+trainingRaw <- read.csv("training.csv", header=TRUE, 
                      na.strings=c("", "NA", "NULL", "#DIV/0!"))
-testing <- read.csv("testing.csv", header=TRUE, 
+testingRaw <- read.csv("testing.csv", header=TRUE, 
                      na.strings=c("", "NA", "NULL", "#DIV/0!"))
 ```
 
 Get to know the training dataset. 
 ```{r}
-str(training)
-head(training, 5)
+dim(trainingRaw)
+dim(testingRaw)
 ```
 
 The training dataset contains 19622 observations of 160 variables. Many of the variables have NA values, which we will exclude below.
@@ -69,53 +69,74 @@ The training dataset contains 19622 observations of 160 variables. Many of the v
 rmNaColumn <- function (x) { 
   !any(is.na(x) | x=="")
   }
-clean <- training[sapply(training, rmNaColumn)]
+clean <- training[sapply(trainingRaw, rmNaColumn)]
 dim(clean)
 ```
 
-The updated training dataset has fewer variables than before since several columns were completely NA. Now partition the data set into training and test sets. Recall that classe is the outcome variable we are trying to predict. 
+The updated dataset has fewer variables than before since several columns were completely NA. Now partition the data set into training and test sets. Recall that classe is the outcome variable we are trying to predict. 
 ```{r}
 inTrain <- createDataPartition(clean$classe, p=0.7, list=FALSE)
-training <- clean[inTrain,]
-testing <- clean[-inTrain,]
+cleanTraining <- clean[inTrain,]
+cleanTesting <- clean[-inTrain,]
+dim(cleanTraining)
+dim(cleanTesting)
 ```
+
+Delete more unnecessary columns. 
+```{r}
+forDelete <- grepl("X|user_name|timestamp|new_window", colnames(cleanTraining))
+cleanTraining <- cleanTraining[, !forDelete]
+cleanTesting <- cleanTesting[, !forDelete]
+dim(cleanTraining)
+dim(cleanTesting)
+```
+
+Since there are 60 variables let's visualize the the dataset using a dendrogram. This highlights the fact that there is a lot going on in this dataset.
+```{r}
+correl <- cor(cleanTraining[, -54])
+plot(hclust(dist(correl)), cex = 0.7)
+```
+
+
+# Principal Components Analysis
+We don't want a lot of multi-collinearity; let's use the handy findCorrelation function to filter out those variables. This leaves us with only 33 variables, which is much easier to deal with from a computational standpoint.
+```{r}
+highCollinearity <- findCorrelation(correl, cutoff=0.75)
+cleanTraining <- cleanTraining[, -highCollinearity]
+cleanTesting <- cleanTesting[, -highCollinearity]
+dim(cleanTraining)
+```
+
+Finally we will check for near-zero covariates. Variables that have very little variability will likely be poor predictors. It appears all of the variables are not near-zero.
+```{r}
+nsv <- nearZeroVar(cleanTraining, saveMetrics=TRUE)
+nsv
+```
+
 
 # Training A Model For Prediction
 Now we will derive relationships from the remaining variables.
 
 ###### Random Forest Model
+Here we will train a Random Forest model on the clean training dataset.
 ```{r}
 library(randomForest)
-control <- trainControl(method='cv', number=4, allowParallel=TRUE)
-fit <- train(classe ~ ., data=training, model='rf', trControl=control)
+control <- trainControl(allowParallel=T, method="cv", number=4)
+model <- train(classe ~ ., data=cleanTraining, model='rf', trControl=control)
+predictions <- predict(model, newdata=cleanTesting)
 ```
 
-
-
-
-
-
-
-JUNK BELOW
+We can check to see how good these predictions were.
 ```{r}
-clean <- clean[, -(1:6)]
-check <- clean[, -54]
+actuality = cleanTesting$classe
+numberRight <- sum(predictions == actuality)
+numberTotal <- length(predictions)
+percentAccuracy <- numberRight / numberTotal
+```
 
-
-
-corr <- corrplot(check, method="color")
-mcor <- cor(check)
-corrplot(mcor, type="upper", order="hclust", tl.col="black", tl.srt=45)
-library(Hmisc)
-rcorr(as.matrix(check))
-
-
-
-
-clean <- training[, apply(training, 2, naRm)]
-criteria <- "belt|[^(fore)]arm|dumbbell|forearm"
-cleanPredictors <- !dirty & grepl(criteria, names(dirty))
-predictors <- names(dirty)[cleanPredictors]
+A confusion matrix is another way of looking at the outcome.
+```{r}
+confusionMatrix(cleanTesting$classe, predictions)$table
 ```
 
 
@@ -125,9 +146,6 @@ predictors <- names(dirty)[cleanPredictors]
 
 
 
-
-
-LOOK UP CORR PLOT
 
 
 
