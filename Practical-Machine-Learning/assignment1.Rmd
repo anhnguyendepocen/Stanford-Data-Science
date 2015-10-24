@@ -1,5 +1,5 @@
 ---
-title: "Machine Learning: Human Activity Recognition"
+title: 'Machine Learning: Human Activity Recognition'
 author: "Paul M. Washburn"
 date: "September 2015"
 output: html_document
@@ -12,59 +12,110 @@ This is an assignment in the course Practical Machine Learning, which is course 
 The [Human Activity Recognition](http://groupware.les.inf.puc-rio.br/har) (HAR) dataset is a large compilation of metrics describing the movement patterns of certain individuals. 
 
 ### Background
-Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+Human Activity Recognition - HAR - has emerged as a key research area in the last years and is gaining increasing attention by the pervasive computing research community (see picture below, that illustrates the increasing number of publications in HAR with wearable accelerometers), especially for the development of context-aware systems. There are many potential applications for HAR, like: elderly monitoring, life log systems for monitoring energy expenditure and for supporting weight-loss programs, and digital assistants for weight lifting exercises.
 
-### Submission
-The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
+Read More at: http://groupware.les.inf.puc-rio.br/har#ixzz3pVa0EBDJ
 
-1. Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to < 2000 words and the number of figures to be less than 5. It will make it easier for the graders if you submit a repo with a gh-pages branch so the HTML page can be viewed online (and you always want to make it easy on graders :-).
-2. You should also apply your machine learning algorithm to the 20 test cases available in the test data above. Please submit your predictions in appropriate format to the programming assignment for automated grading. See the programming assignment for additional details. 
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
 
-### Reproducibility & Securityi
-Due to security concerns with the exchange of R code, your code will not be run during the evaluation by your classmates. Please be sure that if they download the repo, they will be able to view the compiled HTML version of your analysis. 
-
-
-
-# Data Acquisition
-Load the libraries necessary.
-```{r echo=FALSE}
+### Objectives:
+  * Predict the manner in which exercises were performed ('classe')
+    * May use any variable to predict with
+  * Create a report on how model was built
+    * How cross-validation was used
+    * What your expectations were for out of sample error
+    * Justify the choices made
+  * Submit GitHub repo with R Markdown compiled for HTML
+    * Text should be less than 2000 words 
+    * Figures <= 5
+  * Apply your machine learning algorithm to the 20 test cases available in the test data
+    * Submit predictions in appropriate format; see the programming assignment for how to submit for automated grading
+    
+### Data Overview
+The 5 classes of interest include: sitting down, standing up, standing, walking an dsitting.
+  * 8 hours of activity on 4 healthy subjects per day
+  * Baseline performance index is also established
+  * This dataset is licensed under the Creative Commons license (CC BY-SA)
+    
+# Data Acquisition, Exploration and Reduction
+Load the libraries necessary and set the seed for reproducibility.
+```{r}
+set.seed(8008135)
 library(caret)
 library(corrplot)
 ```
 
-
 Download the [training](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv) and [testing](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv) datasets from their source and load into R. 
 ```{r}
-setwd("C:/Users/pmwash/Desktop/R_Files")
+setwd("C:/Users/Paul/Desktop/R")
 path <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
-download.file(path, destfile="training.csv")
+#download.file(path, destfile="training.csv")
 path <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
-download.file(path, destfile="testing.csv")
+#download.file(path, destfile="testing.csv")
 training <- read.csv("training.csv", header=TRUE, 
                      na.strings=c("", "NA", "NULL", "#DIV/0!"))
-testing <- read.csv("testing.csv", header=TRUE 
-                    na.strings=c("", "NA", "NULL", "#DIV/0!"))
+testing <- read.csv("testing.csv", header=TRUE, 
+                     na.strings=c("", "NA", "NULL", "#DIV/0!"))
 ```
 
 Get to know the training dataset. 
 ```{r}
 str(training)
-head(training, 2)
-summary(training)
+head(training, 5)
 ```
 
 The training dataset contains 19622 observations of 160 variables. Many of the variables have NA values, which we will exclude below.
 ```{r}
-dirty <- sapply(training, function (x) any(is.na(x) | x==""))
-clean <- training[, apply(training, 2, function(x) !any(is.na(x)))]
-cleanPredictors <- !dirty & grepl("belt|[^(fore)]arm|dumbbell|forearm", names(dirty))
-potentialPredictors <- names(dirty)[cleanPredictors]
+rmNaColumn <- function (x) { 
+  !any(is.na(x) | x=="")
+  }
+clean <- training[sapply(training, rmNaColumn)]
+dim(clean)
+```
+
+The updated training dataset has fewer variables than before since several columns were completely NA. Now partition the data set into training and test sets. Recall that classe is the outcome variable we are trying to predict. 
+```{r}
+inTrain <- createDataPartition(clean$classe, p=0.7, list=FALSE)
+training <- clean[inTrain,]
+testing <- clean[-inTrain,]
+```
+
+# Training A Model For Prediction
+Now we will derive relationships from the remaining variables.
+
+###### Random Forest Model
+```{r}
+library(randomForest)
+control <- trainControl(method='cv', number=4, allowParallel=TRUE)
+fit <- train(classe ~ ., data=training, model='rf', trControl=control)
 ```
 
 
-```{r}
-corr <- corrplot(clean, order="FPC", method="color", type="lower", tl.cex=0.8, tl.col=rgb(0,0,0))
 
+
+
+
+
+JUNK BELOW
+```{r}
+clean <- clean[, -(1:6)]
+check <- clean[, -54]
+
+
+
+corr <- corrplot(check, method="color")
+mcor <- cor(check)
+corrplot(mcor, type="upper", order="hclust", tl.col="black", tl.srt=45)
+library(Hmisc)
+rcorr(as.matrix(check))
+
+
+
+
+clean <- training[, apply(training, 2, naRm)]
+criteria <- "belt|[^(fore)]arm|dumbbell|forearm"
+cleanPredictors <- !dirty & grepl(criteria, names(dirty))
+predictors <- names(dirty)[cleanPredictors]
 ```
 
 
