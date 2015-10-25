@@ -69,8 +69,10 @@ The training dataset contains 19622 observations of 160 variables. Many of the v
 rmNaColumn <- function (x) { 
   !any(is.na(x) | x=="")
   }
-clean <- training[sapply(trainingRaw, rmNaColumn)]
+clean <- trainingRaw[sapply(trainingRaw, rmNaColumn)]
+cleanTestingForLater <- testingRaw[sapply(testingRaw, rmNaColumn)]
 dim(clean)
+dim(cleanTestingForLater)
 ```
 
 The updated dataset has fewer variables than before since several columns were completely NA. Now partition the data set into training and test sets. Recall that classe is the outcome variable we are trying to predict. 
@@ -87,11 +89,13 @@ Delete more unnecessary columns.
 forDelete <- grepl("X|user_name|timestamp|new_window", colnames(cleanTraining))
 cleanTraining <- cleanTraining[, !forDelete]
 cleanTesting <- cleanTesting[, !forDelete]
+cleanTestingForLater <- cleanTestingForLater[, !forDelete]
 dim(cleanTraining)
 dim(cleanTesting)
+dim(cleanTestingForLater)
 ```
 
-Since there are 60 variables let's visualize the the dataset using a dendrogram. This highlights the fact that there is a lot going on in this dataset.
+Since there are 53 variables let's visualize the the dataset using a dendrogram. This highlights the fact that there is a lot going on in this dataset, meaning we might be fitting the model to variables that don't matter at a great cost to computational efficiency.
 ```{r}
 correl <- cor(cleanTraining[, -54])
 plot(hclust(dist(correl)), cex = 0.7)
@@ -104,7 +108,10 @@ We don't want a lot of multi-collinearity; let's use the handy findCorrelation f
 highCollinearity <- findCorrelation(correl, cutoff=0.75)
 cleanTraining <- cleanTraining[, -highCollinearity]
 cleanTesting <- cleanTesting[, -highCollinearity]
+cleanTestingForLater <- cleanTestingForLater[, -highCollinearity]
 dim(cleanTraining)
+dim(cleanTesting)
+dim(cleanTestingForLater)
 ```
 
 Finally we will check for near-zero covariates. Variables that have very little variability will likely be poor predictors. It appears all of the variables are not near-zero.
@@ -122,32 +129,97 @@ Here we will train a Random Forest model on the clean training dataset.
 ```{r}
 library(randomForest)
 control <- trainControl(allowParallel=T, method="cv", number=4)
-model <- train(classe ~ ., data=cleanTraining, model='rf', trControl=control)
+model <- train(classe ~ ., data=cleanTraining, model='rf', trControl=control, 
+               importance=TRUE)
 predictions <- predict(model, newdata=cleanTesting)
 ```
 
-We can check to see how good these predictions were.
+We can check to see how good these first-pass predictions were.
 ```{r}
-actuality = cleanTesting$classe
+actuality <- cleanTesting$classe
 numberRight <- sum(predictions == actuality)
 numberTotal <- length(predictions)
 percentAccuracy <- numberRight / numberTotal
+percentAccuracy
 ```
 
-A confusion matrix is another way of looking at the outcome.
+The predictions were accurate 99.86% of the time. A confusion matrix is another way of looking at this outcome.
 ```{r}
 confusionMatrix(cleanTesting$classe, predictions)$table
 ```
 
+Now we can rank the principal components in a graphical format. The most important metrics are at the top going all the way down to the least important of the filtered down set of variables. 
+```{r}
+varImpPlot(model$finalModel, sort=TRUE, type=1, pch=18, col=1, cex=0.5,
+           main='Relative Importance of Principal Components')
+```
+The top 6 variables are:
+
+  * num_window
+  * yaw_belt
+  * pitch_forearm
+  * magnet_dumbbell_z
+  * magnet_belt_y
+  * roll_dumbbell
+
+So we will filter the training set and train a new model.
+
+```{r}
+colsThatMatter <- c('num_window', 'yaw_belt', 'pitch_forearm', 
+                 'magnet_dumbbell_z', 'magnet_belt_y', 'roll_dumbbell',
+                 'classe')
+finalTraining <- cleanTraining[colsThatMatter]
+```
 
 
+# Cross-Validation Testing & Out-of-Sample Error Estimate
+##### Using Principal Components, Re-Train Model & Assess Accuracy
+```{r}
+control <- trainControl(allowParallel=T, method="cv", number=4)
+model <- train(classe ~ ., data=finalTraining, model='rf', trControl=control, 
+               importance=TRUE)
+predictions <- predict(model, newdata=cleanTesting)
+```
 
+Let's see how well these six predictors did in correctly predicting classe. 
+```{r}
+actuality <- cleanTesting$classe
+numberRight <- sum(predictions == actuality)
+numberTotal <- length(predictions)
+percentAccuracy <- numberRight / numberTotal
+percentAccuracy
+```
+We had a cost of -0.01% to our accuracy; the benefit was significantly decreasing the processing necessary in terms of features.
 
+Out of sample error displayed below as just 0.19%. This is what we expect the error rate when using this model outside this dataset, which we are about to test.
+```{r}
+oosErrorEstimate <- 1 - percentAccuracy
+oosErrorEstimate
+```
 
+# Predict classe On 20 Test Datasets
+Below are the predictions on the 20 test datasets that were processed parallel to the others. 
+```{r}
+finalPredictions <- predict(model, newdata=cleanTestingForLater)
+finalPredictions
+```
 
+Let's create the files to submit the predictions (1-20).
+```{r}
+answers <- list('B', 'A', 'B', 'A', 'A', 
+                'E', 'D', 'B', 'A', 'A', 
+                'B', 'C', 'B', 'A', 'E', 
+                'E', 'A', 'B', 'B', 'B')
 
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
 
-
-
+pml_write_files(answers)
+```
 
 
