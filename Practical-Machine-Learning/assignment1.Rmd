@@ -170,6 +170,12 @@ colsThatMatter <- c('num_window', 'yaw_belt', 'pitch_forearm',
                  'classe')
 finalTraining <- cleanTraining[colsThatMatter]
 ```
+Now let's do a quick visualization test to check for collinearity in the x variables. 
+```{r}
+correl <- cor(finalTraining[,-7])
+corrplot(correl, order = "FPC", method = "color", type = "lower", tl.cex = 0.8, 
+    tl.col = rgb(0, 0, 0))
+```
 
 
 # Cross-Validation Testing & Out-of-Sample Error Estimate
